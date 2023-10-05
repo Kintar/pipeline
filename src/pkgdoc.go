@@ -8,7 +8,7 @@ potentially of a different type. A Consumer receives items and performs some ope
 further items for the pipeline.
 
 Concurrency is achieved internally by wiring the functions together through buffered channels and running each on its
-own goroutine. This means that once a Stage has produced an item, it can start handling the next item while the next
+own goroutine. This means that once a Stage has produced an item, it can init handling the next item while the next
 stage of the pipeline works. Additionally, options are available to run any stage of the pipeline in parallel across
 some arbitrary number of goroutines. This is useful if, for example, a stage of your pipeline is I/O bound and does
 not process items as fast as the stage feeding it, which is especially common when working with web-based APIs or
