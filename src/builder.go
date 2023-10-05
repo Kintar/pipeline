@@ -6,7 +6,7 @@ import (
 )
 
 // Builder contains context required by the pipeline package to construct a pipeline.
-// Pipelines can be created using the New or NewWithChannel functions, and composed using the Connect function.
+// Pipelines can be created using the New or NewFromChannel functions, and composed using the Connect function.
 // A pipeline does not begin execution until Build is called on the stage.
 type Builder[IN, OUT any] struct {
 	prev       *Builder[any, IN]

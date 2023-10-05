@@ -18,6 +18,11 @@ var jobNoOp = func() error { return nil }
 // canceled.
 type Job func() error
 
+// Source is a function that returns a series of items. If more items are available, the boolean value must be true.
+// If there was an unrecoverable error that causes the producer to fail before reaching the end of its sequence, the
+// error value must be non-nil.
+type Source[T any] func() (T, bool, error)
+
 // Producer is a function that generates a channel and a job to feed that channel.
 type Producer[T any] func(ctx context.Context, bufferSize int) (<-chan T, Job)
 
@@ -63,8 +68,32 @@ func channelProducer[T any](input <-chan T) Producer[T] {
 	}
 }
 
-// New begins a new pipeline with the given Producer as its source.
-func New[T any](p Producer[T]) *Builder[T, T] {
+func sourceProducer[T any](s Source[T]) Producer[T] {
+	return func(ctx context.Context, bufferSize int) (<-chan T, Job) {
+		outChan := make(chan T, bufferSize)
+		return outChan, func() error {
+			defer close(outChan)
+			for {
+				item, more, err := s()
+				if err != nil {
+					return err
+				}
+				outChan <- item
+				if !more {
+					return nil
+				}
+			}
+		}
+	}
+}
+
+// New begins a new pipeline with the given Source as its source.
+func New[T any](s Source[T]) *Builder[T, T] {
+	return NewFromProducer(sourceProducer(s))
+}
+
+// NewFromProducer begins a new pipeline with the given Producer as its source.
+func NewFromProducer[T any](p Producer[T]) *Builder[T, T] {
 	return &Builder[T, T]{
 		producer:   p,
 		bufferSize: 0,
@@ -72,9 +101,9 @@ func New[T any](p Producer[T]) *Builder[T, T] {
 	}
 }
 
-// NewWithChannel begins a new pipeline with the given channel as the input. When the channel is closed, the pipeline
+// NewFromChannel begins a new pipeline with the given channel as its source. When the channel is closed, the pipeline
 // is concluded.
-func NewWithChannel[T any](c <-chan T) *Builder[T, T] {
+func NewFromChannel[T any](c <-chan T) *Builder[T, T] {
 	return &Builder[T, T]{
 		producer:   channelProducer[T](c),
 		bufferSize: 0,
@@ -94,7 +123,7 @@ func Connect[IN, OUT any](b *Builder[any, IN], processor Processor[IN, OUT]) *Bu
 
 // Emit builds the pipeline represented by Builder and returns the pipeline and a channel which will be closed when the
 // pipeline completes or errors.
-func Emit[OUT any](b *Builder[any, OUT]) (Pipeline, <-chan OUT, error) {
+func Emit[IN, OUT any](b *Builder[IN, OUT]) (Pipeline, <-chan OUT, error) {
 	pipe, out, err := b.init()
 	if err != nil {
 		return pipe, out, err
