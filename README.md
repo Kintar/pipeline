@@ -36,9 +36,3 @@ process with a decorated or annotated version of the data, or similar.
 During processing, errors can occur. These errors might be large enough that they require the entire process to abort,
 or they might affect only a small subset of the input data. Errors may only need to be logged, or they might require the
 process to perform some number of retries, or send the bad data to another flow or external process.
-
-## Concepts
-
-This library deals with three core concepts; `Producers`, which receive data into the pipeline, `Processors`, which
-take some action on a datum and then either discard it or pass it along to another step, and `Consumers`, which are the
-final recipient of a datum, after which no other processing takes place.
