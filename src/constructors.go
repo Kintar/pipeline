@@ -1,14 +1,19 @@
 package pipeline
 
+import (
+	"sync"
+)
+
 func makeProcessorPump[IN, OUT any](
-	input channelSupplier[IN],
-	output channelSupplier[OUT],
+	input <-chan IN,
+	output chan<- OUT,
 	proc Processor[IN, OUT],
 	filter PredicateFilter[OUT],
 ) Job {
 	return func() error {
-		out := output.supplyChannel()
-		for i := range input.supplyChannel() {
+		defer sync.OnceFunc(func() { close(output) })
+		out := output
+		for i := range input {
 			o, err := proc(i)
 			if err != nil {
 				return err
